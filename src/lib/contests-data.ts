@@ -22,6 +22,7 @@ export type ContestItem = Candidate & {
   canVote: boolean;
   voted: boolean;
   groupVoted: boolean;
+  voterAvatars: (string | null)[];
 };
 
 export type OutContender = {
@@ -88,6 +89,27 @@ export async function getContests(): Promise<ContestsData> {
       if (!r.expires_at) waitingByCategory.set(r.category, (waitingByCategory.get(r.category) ?? 0) + 1);
     }
 
+    // Latest two voters of each contender for the avatar stack, for signed-in users only.
+    const recentVoters = new Map<string, string[]>();
+    const voterAvatar = new Map<string, string | null>();
+    if (user && active.length > 0) {
+      const { data: vs } = await admin
+        .from("contender_votes")
+        .select("contender_id, user_id")
+        .in("contender_id", active.map((r) => r.id))
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      for (const v of vs ?? []) {
+        const list = recentVoters.get(v.contender_id) ?? [];
+        if (list.length < 2) recentVoters.set(v.contender_id, [...list, v.user_id]);
+      }
+      const ids = [...new Set([...recentVoters.values()].flat())];
+      const { data: vp } = ids.length
+        ? await admin.from("profiles").select("user_id, avatar_path").in("user_id", ids)
+        : { data: [] };
+      for (const p of vp ?? []) voterAvatar.set(p.user_id, p.avatar_path ? `${photoBaseUrl()}/${p.avatar_path}` : null);
+    }
+
     const votedIds = new Set((myVotes ?? []).map((v) => v.contender_id));
     const votedGroups = new Set((myVotes ?? []).map((v) => `${v.category}|${v.level}`));
     const order = (id: string) => CONTEST_CATEGORIES.findIndex((c) => c.id === id);
@@ -123,6 +145,7 @@ export async function getContests(): Promise<ContestsData> {
           canVote: r.expires_at !== null && canVote(r),
           voted: votedIds.has(r.id),
           groupVoted: votedGroups.has(`${r.category}|${r.level}`),
+          voterAvatars: (recentVoters.get(r.id) ?? []).map((id) => voterAvatar.get(id) ?? null),
         };
       })
       .sort(

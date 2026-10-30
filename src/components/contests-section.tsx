@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { VoterStack } from "@/components/nominator-stack";
 import { ReportButton } from "@/components/report-button";
 import { CONTEST_CATEGORIES, CONTEST_START_COUNT, categoryOf } from "@/lib/contests";
 import type { ContestItem, ContestsData, OutContender } from "@/lib/contests-data";
@@ -225,6 +226,7 @@ export function ContestsSection({ data }: { data: ContestsData }) {
               }}
               place={i.areaText}
               unit="صوت"
+              stack={<VoterStack id={i.id} count={i.votes} avatars={i.voterAvatars} />}
               mine={i.voted}
             >
               <div className="flex flex-col gap-2">

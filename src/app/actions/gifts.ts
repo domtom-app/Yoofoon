@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getSessionUser } from "@/lib/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { photoBaseUrl } from "@/lib/voting-data";
+import { publicPeople, type PublicPerson } from "@/lib/public-people";
 import { notify } from "@/lib/notifications";
 import type { AdminState } from "@/app/actions/admin";
 
@@ -64,7 +65,7 @@ async function givenCount(tipId: string) {
 
 const maskPhone = (p: string) => (p.length >= 8 ? `${p.slice(0, 3)}•••••${p.slice(-3)}` : "•••••");
 
-export type PublicNominator = { userId: string; name: string; avatarUrl: string | null; governorate: string };
+export type PublicNominator = PublicPerson;
 
 // No phone numbers, and only for signed-in users.
 export async function listTipNominators(tipId: string): Promise<{ error?: string; items: PublicNominator[] }> {
@@ -83,31 +84,7 @@ export async function listTipNominators(tipId: string): Promise<{ error?: string
       .limit(100);
     const ids = (noms ?? []).map((n) => n.user_id);
     if (ids.length === 0) return { items: [] };
-    const { data: profiles } = await admin
-      .from("profiles")
-      .select("user_id, avatar_path, username, district_id")
-      .in("user_id", ids);
-    const districtIds = (profiles ?? []).map((p) => p.district_id).filter((d): d is string => Boolean(d));
-    const [{ data: districts }, { data: govs }] = await Promise.all([
-      districtIds.length
-        ? admin.from("districts").select("id, governorate_id").in("id", districtIds)
-        : Promise.resolve({ data: [] }),
-      admin.from("governorates").select("id, name"),
-    ]);
-    const govName = new Map((govs ?? []).map((g) => [g.id, g.name]));
-    const govOfDistrict = new Map((districts ?? []).map((d) => [d.id, govName.get(d.governorate_id) ?? ""]));
-    const profileOf = new Map((profiles ?? []).map((p) => [p.user_id, p]));
-    return {
-      items: ids.map((uid) => {
-        const p = profileOf.get(uid);
-        return {
-          userId: uid,
-          name: p?.username ?? "مستخدم",
-          avatarUrl: p?.avatar_path ? `${photoBaseUrl()}/${p.avatar_path}` : null,
-          governorate: p?.district_id ? (govOfDistrict.get(p.district_id) ?? "") : "",
-        };
-      }),
-    };
+    return { items: await publicPeople(ids) };
   } catch {
     return { error: "تعذّر التحميل", items: [] };
   }

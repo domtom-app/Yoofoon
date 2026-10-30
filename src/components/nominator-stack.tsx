@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState, useTransition } from "react";
 import { Loader2, User } from "lucide-react";
+import { listContenderVoters } from "@/app/actions/contests";
 import { listTipNominators, type PublicNominator } from "@/app/actions/gifts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -23,23 +24,45 @@ function Face({ url, size }: { url: string | null; size: number }) {
   );
 }
 
-export function NominatorStack({ tipId, count, avatars }: { tipId: string; count: number; avatars: (string | null)[] }) {
+type Loader = (id: string) => Promise<{ error?: string; items: PublicNominator[] }>;
+
+export function VoterStack({ id, count, avatars }: { id: string; count: number; avatars: (string | null)[] }) {
+  return (
+    <NominatorStack tipId={id} count={count} avatars={avatars} load={listContenderVoters} noun="صوت" title="المصوّتون" />
+  );
+}
+
+export function NominatorStack({
+  tipId,
+  count,
+  avatars,
+  load = listTipNominators,
+  noun = "مهتم",
+  title = "المهتمون",
+}: {
+  tipId: string;
+  count: number;
+  avatars: (string | null)[];
+  load?: Loader;
+  noun?: string;
+  title?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<PublicNominator[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, startLoad] = useTransition();
 
-  if (count <= 0) return <span className="shrink-0 text-muted-foreground">0 مهتم</span>;
+  if (count <= 0) return <span className="shrink-0 text-muted-foreground">0 {noun}</span>;
 
   return (
     <>
       <button
         type="button"
-        aria-label={`المهتمون ${count}`}
+        aria-label={`${title} ${count}`}
         onClick={() => {
           setOpen(true);
           startLoad(async () => {
-            const res = await listTipNominators(tipId);
+            const res = await load(tipId);
             setItems(res.items);
             setError(res.error ?? null);
           });
@@ -53,12 +76,12 @@ export function NominatorStack({ tipId, count, avatars }: { tipId: string; count
             </span>
           ))}
         </span>
-        <span className="text-xs font-bold tabular-nums text-muted-foreground">{compactCount(count)} مهتم</span>
+        <span className="text-xs font-bold tabular-nums text-muted-foreground">{compactCount(count)} {noun}</span>
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex max-h-[80dvh] flex-col gap-3 p-4">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">المهتمون ({compactCount(count)})</DialogTitle>
+            <DialogTitle className="text-base font-bold">{title} ({compactCount(count)})</DialogTitle>
           </DialogHeader>
           {loading && !items ? (
             <Loader2 className="mx-auto my-6 size-6 animate-spin text-primary" />

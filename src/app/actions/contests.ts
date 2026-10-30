@@ -9,6 +9,7 @@ import { checkRateLimit } from "@/lib/ratelimit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseArea } from "@/lib/parse-area";
 import { categoryOf, CONTEST_DAYS, CONTEST_START_COUNT, type ContestLevel } from "@/lib/contests";
+import { publicPeople, type PublicPerson } from "@/lib/public-people";
 import type { TipState } from "@/app/actions/tips";
 
 const MAX_PER_USER = 5;
@@ -210,6 +211,22 @@ export async function rerunContender(_prev: TipState, formData: FormData): Promi
   }
   refresh();
   return { done: true };
+}
+
+export async function listContenderVoters(contenderId: string): Promise<{ error?: string; items: PublicPerson[] }> {
+  if (!idSchema.safeParse(contenderId).success) return { error: "غير صالح", items: [] };
+  if (!(await getSessionUser())) return { error: "سجّل الدخول لعرض المصوّتين", items: [] };
+  try {
+    const { data } = await createAdminClient()
+      .from("contender_votes")
+      .select("user_id")
+      .eq("contender_id", contenderId)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    return { items: await publicPeople((data ?? []).map((v) => v.user_id as string)) };
+  } catch {
+    return { error: "تعذّر التحميل", items: [] };
+  }
 }
 
 export async function adminDeleteContender(id: string): Promise<TipState> {
