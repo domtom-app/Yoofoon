@@ -6,6 +6,7 @@ import { createClient as createPlainClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { parsePhoto, removePhoto, uploadPhoto } from "@/lib/admin-storage";
 import { isEgyptPhone, normalizeDigits, toE164 } from "@/lib/phone";
+import { cleanLinks, SOCIAL_LABELS, toUrl, type SocialKey, type SocialLinks } from "@/lib/social";
 import { getProfile, getSessionUser } from "@/lib/profile";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -13,6 +14,21 @@ import { createClient } from "@/lib/supabase/server";
 import { daysUntilChange } from "@/lib/voting";
 
 export type ProfileState = { error?: string };
+
+export async function acceptTerms(): Promise<ProfileState> {
+  const user = await getSessionUser();
+  if (!user) return { error: "سجّل الدخول أولًا" };
+  try {
+    const { error } = await createAdminClient()
+      .from("profiles")
+      .upsert({ user_id: user.id, terms_accepted_at: new Date().toISOString() }, { onConflict: "user_id" });
+    if (error) return { error: "تعذّر الحفظ" };
+  } catch {
+    return { error: "تعذّر الحفظ" };
+  }
+  revalidatePath("/", "layout");
+  return {};
+}
 
 const idSchema = z.string().uuid();
 
@@ -58,6 +74,38 @@ export async function changePhone(newPhone: string, password: string): Promise<P
     return { error: "تعذّر تغيير الرقم" };
   }
   revalidatePath("/", "layout");
+  return {};
+}
+
+export async function changePassword(current: string, next: string): Promise<ProfileState> {
+  const user = await getSessionUser();
+  if (!user?.phone) return { error: "سجّل الدخول أولًا" };
+  if (next.length < 6 || next.length > 72) return { error: "كلمة المرور من 6 إلى 72 حرفًا" };
+  if (current.length < 6 || current.length > 72) return { error: "كلمة المرور الحالية غير صحيحة" };
+  if (next === current) return { error: "الكلمة الجديدة مطابقة للحالية" };
+
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0] ?? "local";
+  if (!(await checkRateLimit(`password:${user.id}:${ip}`))) {
+    return { error: "محاولات كثيرة، انتظر قليلًا" };
+  }
+
+  try {
+    const verifier = createPlainClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { persistSession: false, autoRefreshToken: false } },
+    );
+    const { error: authError } = await verifier.auth.signInWithPassword({
+      phone: toE164(user.phone),
+      password: current,
+    });
+    if (authError) return { error: "كلمة المرور الحالية غير صحيحة" };
+
+    const { error } = await createAdminClient().auth.admin.updateUserById(user.id, { password: next });
+    if (error) return { error: "تعذّر تغيير كلمة المرور" };
+  } catch {
+    return { error: "تعذّر تغيير كلمة المرور" };
+  }
   return {};
 }
 
@@ -114,13 +162,16 @@ export async function saveAvatar(formData: FormData): Promise<ProfileState> {
   return {};
 }
 
-export async function savePhonePublic(value: boolean): Promise<ProfileState> {
+export async function saveUsername(value: string): Promise<ProfileState> {
   const user = await getSessionUser();
   if (!user) return { error: "سجّل الدخول أولًا" };
+  const parsed = z.string().trim().max(40).safeParse(value);
+  if (!parsed.success) return { error: "الاسم طويل" };
+  if (parsed.data.length === 1) return { error: "الاسم قصير" };
   try {
     const { error } = await createAdminClient()
       .from("profiles")
-      .upsert({ user_id: user.id, phone_public: z.boolean().parse(value) });
+      .upsert({ user_id: user.id, username: parsed.data || null });
     if (error) throw error;
   } catch {
     return { error: "تعذّر الحفظ" };
@@ -128,3 +179,48 @@ export async function savePhonePublic(value: boolean): Promise<ProfileState> {
   revalidatePath("/", "layout");
   return {};
 }
+
+export type ContactMode = "name" | "phone" | "both";
+
+export async function saveContactMode(mode: ContactMode): Promise<ProfileState> {
+  const user = await getSessionUser();
+  if (!user) return { error: "سجّل الدخول أولًا" };
+  const parsed = z.enum(["name", "phone", "both"]).safeParse(mode);
+  if (!parsed.success) return { error: "اختيار غير صالح" };
+  try {
+    const { error } = await createAdminClient()
+      .from("profiles")
+      .upsert({
+        user_id: user.id,
+        phone_public: parsed.data !== "name",
+        name_with_phone: parsed.data === "both",
+      });
+    if (error) throw error;
+  } catch {
+    return { error: "تعذّر الحفظ" };
+  }
+  revalidatePath("/", "layout");
+  return {};
+}
+
+export async function saveSocial(links: SocialLinks, show: boolean): Promise<ProfileState> {
+  const user = await getSessionUser();
+  if (!user) return { error: "سجّل الدخول أولًا" };
+  const clean: SocialLinks = {};
+  for (const [key, raw] of Object.entries(cleanLinks(links))) {
+    const url = toUrl(raw);
+    if (!url) return { error: `رابط ${SOCIAL_LABELS[key as SocialKey]} غير صالح` };
+    clean[key as SocialKey] = url;
+  }
+  try {
+    const { error } = await createAdminClient()
+      .from("profiles")
+      .upsert({ user_id: user.id, social_links: clean, social_public: Boolean(show) });
+    if (error) throw error;
+  } catch {
+    return { error: "تعذّر الحفظ" };
+  }
+  revalidatePath("/", "layout");
+  return {};
+}
+

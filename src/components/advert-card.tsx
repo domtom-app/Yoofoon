@@ -6,8 +6,9 @@ import { EditTip } from "@/components/admin-tips";
 import { useAction } from "@/components/admin-ui";
 import { Button } from "@/components/ui/button";
 import { NominatorsButton } from "@/components/nominators-dialog";
+import { NominatorStack } from "@/components/nominator-stack";
 import { ReportButton } from "@/components/report-button";
-import { NominateForm } from "@/components/tips-section";
+import { headline, NominateForm } from "@/components/tips-section";
 import { Typewriter } from "@/components/typewriter";
 import { deleteTip } from "@/app/actions/tips";
 import type { Places } from "@/lib/area";
@@ -21,9 +22,9 @@ function OwnerTools({ tip, places }: { tip: TipItem; places: Places }) {
   const [confirming, setConfirming] = useState(false);
   return (
     <div className="flex flex-col gap-1">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-1.5">
         <EditTip
-          tip={{ id: tip.id, title: tip.name, body: tip.body, photoUrl: tip.photoUrl, area: tip.area, link: tip.link, offer: tip.offer, offerQty: tip.offerQty, offerPercent: tip.offerPercent }}
+          tip={{ id: tip.id, title: tip.name, body: tip.body, photoUrl: tip.photoUrl, area: tip.area, link: tip.link, offer: tip.offer, offerQty: tip.offerQty, offerPercent: tip.offerPercent, priceNow: tip.priceNow, priceBefore: tip.priceBefore }}
           places={places}
         />
         {confirming ? (
@@ -39,8 +40,8 @@ function OwnerTools({ tip, places }: { tip: TipItem; places: Places }) {
             حذف
           </Button>
         )}
+        {tip.approved && <NominatorsButton tipId={tip.id} />}
       </div>
-      {tip.approved && tip.offer === "free" && <NominatorsButton tipId={tip.id} />}
       {remove.error && <p role="alert" className="text-center text-sm text-destructive">{remove.error}</p>}
     </div>
   );
@@ -53,21 +54,27 @@ export function AdvertCard({
   account = false,
   owner = false,
   places,
+  full = false,
 }: {
   tip: TipItem;
   mine?: boolean;
   account?: boolean;
   owner?: boolean;
   places?: Places;
+  full?: boolean;
 }) {
+  const where = full ? tip.areaFull : tip.areaText;
   return (
     <div className="flex w-full flex-col gap-2">
       {owner && <p className="text-center text-sm font-bold leading-[1.5]">{OWNER_LABEL}</p>}
       <ul>
         <CandidateCard
-          c={{ ...tip, details: tip.areaText ? [tip.areaText] : undefined }}
+          c={{ ...tip, details: where ? [where] : undefined }}
           unit="مهتم"
+          stack={<NominatorStack tipId={tip.id} count={tip.votes} avatars={tip.nominatorAvatars} />}
           mine={mine}
+          price={headline(tip)}
+          place={where}
           description={
             tip.body ? (
               <div className="text-start text-sm font-medium leading-7">

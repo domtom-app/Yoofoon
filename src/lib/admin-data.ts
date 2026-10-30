@@ -1,7 +1,8 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getSettings } from "@/lib/settings";
-import { getAdminTips, type AdminTip } from "@/lib/tips-data";
+import { fetchDistricts } from "@/lib/districts-query";
+import { getSettings, getTipsHeading } from "@/lib/settings";
+import { getAdminAdvertisers, getAdminTips, getAdminUsers, type AdminAdvertiser, type AdminTip } from "@/lib/tips-data";
 import { getMemberData, getVotingData, photoBaseUrl } from "@/lib/voting-data";
 import { DEFAULT_HEADINGS, toCenters, toDistricts, type Candidate, type Center, type District, type Governorate } from "@/lib/voting";
 
@@ -27,6 +28,9 @@ export type AdminData = {
   districts: District[];
   windows: VotingWindows;
   tips: AdminTip[];
+  tipsHeading: string;
+  advertisers: AdminAdvertiser[];
+  users: AdminAdvertiser[];
 };
 
 export async function getAdminData(): Promise<AdminData | null> {
@@ -35,16 +39,19 @@ export async function getAdminData(): Promise<AdminData | null> {
 
   try {
     const admin = createAdminClient();
-    const [gov, centers, districts, members, settings, tips] = await Promise.all([
+    const [gov, centers, districts, members, settings, tips, tipsHeading, advertisers, users] = await Promise.all([
       admin.from("governorates").select("id, name").order("id"),
       admin.from("centers").select("id, governorate_id, name").order("name"),
-      admin.from("districts").select("id, governorate_id, center_id, name").order("name"),
+      fetchDistricts(admin),
       admin
         .from("members")
         .select("id, name, photo_path, governorate_id, district_id")
         .order("created_at"),
       getSettings(),
       getAdminTips(),
+      getTipsHeading(),
+      getAdminAdvertisers(),
+      getAdminUsers(),
     ]);
     if (gov.error || centers.error || districts.error || members.error) return null;
 
@@ -78,6 +85,9 @@ export async function getAdminData(): Promise<AdminData | null> {
         },
       },
       tips,
+      tipsHeading,
+      advertisers,
+      users,
     };
   } catch {
     return null;

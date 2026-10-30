@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchDistricts } from "@/lib/districts-query";
 import { getProfile, getSessionUser } from "@/lib/profile";
 import { toCandidates, toCenters, toDistricts, toMembers, type Candidate, type Center, type District, type Governorate } from "@/lib/voting";
 
@@ -69,7 +70,7 @@ export async function getParliamentData(): Promise<ParliamentData> {
     const [gov, centers, districts, votedMember, user] = await Promise.all([
       admin.from("governorates").select("id, name").order("id"),
       admin.from("centers").select("id, governorate_id, name").order("name"),
-      admin.from("districts").select("id, governorate_id, center_id, name").order("name"),
+      fetchDistricts(admin),
       myVotedId("member_votes"),
       getSessionUser(),
     ]);

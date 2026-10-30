@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { Phone, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SocialLinksRow } from "@/components/social-links";
+import { VerifiedBadge } from "@/components/verified-badge";
 import type { Advertiser } from "@/lib/tips-data";
 
 export function AdvertiserHeader({ advertiser }: { advertiser: Advertiser }) {
@@ -16,6 +18,14 @@ export function AdvertiserHeader({ advertiser }: { advertiser: Advertiser }) {
       {advertiser.place && (
         <p className="text-center text-sm font-bold leading-[1.5] text-muted-foreground">{advertiser.place}</p>
       )}
+      {advertiser.name && (
+        <p className="flex items-center justify-center gap-1 text-center text-lg font-extrabold leading-[1.5]">
+          {advertiser.name}
+          <VerifiedBadge level={advertiser.level} />
+        </p>
+      )}
+      {!advertiser.name && advertiser.level && <VerifiedBadge level={advertiser.level} />}
+      <SocialLinksRow links={advertiser.links} />
       {advertiser.phone && (
         <Button
           render={<a href={`tel:${advertiser.phone}`} />}

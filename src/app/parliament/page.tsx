@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button";
 import { connection } from "next/server";
 import { ParliamentView } from "@/components/parliament-view";
 import { getVisitorCount, PageShell } from "@/components/page-shell";
@@ -7,7 +8,7 @@ import { Tips } from "@/components/tips-block";
 import { getSettings } from "@/lib/settings";
 import { DEFAULT_HEADINGS, windowStatus } from "@/lib/voting";
 
-export const metadata = { title: "تصويت البرلمان" };
+export const metadata = { title: "ØªØµÙˆÙŠØª Ø§Ù„Ø¨Ø±Ù„Ù…Ø§Ù†" };
 
 async function Parliament() {
   await connection();
@@ -18,7 +19,7 @@ async function Parliament() {
   ]);
 
   if (!data.ok) {
-    return <p className="py-20 text-center text-muted-foreground">تعذّر التحميل</p>;
+    return <p className="py-20 text-center text-muted-foreground">ØªØ¹Ø°Ù‘Ø± Ø§Ù„ØªØ­Ù…ÙŠÙ„</p>;
   }
 
   if (settings && !settings.parliamentPublished) {
@@ -38,7 +39,7 @@ async function Parliament() {
       </p>
       <VisitorCount initial={visitors} />
       {data.districts.length === 0 ? (
-        <p className="py-20 text-center text-muted-foreground">لا توجد دوائر</p>
+        <p className="py-20 text-center text-muted-foreground">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¯ÙˆØ§Ø¦Ø±</p>
       ) : (
         <ParliamentView
           data={data}
@@ -56,7 +57,7 @@ async function Parliament() {
 
 export default function ParliamentPage() {
   return (
-    <PageShell>
+    <PageShell back={<BackButton fallback="/" />}>
       <Parliament />
     </PageShell>
   );

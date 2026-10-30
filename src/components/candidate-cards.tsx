@@ -30,7 +30,7 @@ export function VoteButton({
 }: {
   voted: boolean;
   locked: boolean;
-  label?: string;
+  label?: React.ReactNode;
   idle?: string;
   done?: string;
   icon?: boolean;
@@ -98,6 +98,9 @@ export function CandidateCard({
   unit = "صوت",
   photoHref,
   description,
+  price,
+  place,
+  stack,
   children,
 }: {
   c: Candidate;
@@ -105,6 +108,9 @@ export function CandidateCard({
   unit?: string;
   photoHref?: string;
   description?: ReactNode;
+  price?: ReactNode;
+  place?: string;
+  stack?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -131,7 +137,13 @@ export function CandidateCard({
 
       <h2 className="truncate text-center text-base font-bold leading-[1.5]">{c.name}</h2>
 
-      {c.details && (
+      {description && price && (
+        <p dir="rtl" className="-mt-2 text-center text-base font-extrabold leading-[1.5] tabular-nums text-primary">
+          {price}
+        </p>
+      )}
+
+      {c.details && !(description && price) && (
         <div className="-mb-2 -mt-2 text-center text-[11px] font-bold leading-[1.5] text-muted-foreground">
           {c.details.map((d, i) => (
             <p key={i} className="truncate">
@@ -143,21 +155,28 @@ export function CandidateCard({
 
       <div className="flex flex-col gap-1.5">
         {description ? (
-          <div className="flex items-baseline justify-between text-base font-extrabold leading-[1.5]">
-            <span dir="ltr" className="tabular-nums text-primary">
-              {c.percent}%
-            </span>
-            <span className="tabular-nums text-muted-foreground">
-              {c.votes} {unit}
+          <div className="flex items-center justify-between gap-2 text-base font-extrabold leading-[1.5]">
+            {stack ?? (
+              <span className="shrink-0 tabular-nums text-muted-foreground">
+                {c.votes} {unit}
+              </span>
+            )}
+            <span dir="rtl" className="min-w-0 truncate tabular-nums text-primary">
+              {price ? <span className="text-xs text-muted-foreground">{place}</span> : `${c.percent}%`}
             </span>
           </div>
         ) : (
           <>
-            <p dir="ltr" className="text-center text-2xl font-extrabold tabular-nums text-primary">
-              {c.percent}%
+            <p dir="rtl" className="text-center text-2xl font-extrabold tabular-nums text-primary">
+              {price ?? `${c.percent}%`}
             </p>
-            <p className="text-center text-xs font-bold leading-[1.5] text-muted-foreground">
-              <span className="tabular-nums">{c.votes}</span> {unit}
+            <p className="flex items-center justify-between gap-2 text-xs font-bold leading-[1.5] text-muted-foreground">
+              {stack ?? (
+                <span className="shrink-0">
+                  <span className="tabular-nums">{c.votes}</span> {unit}
+                </span>
+              )}
+              {place ? <span className="min-w-0 truncate">{place}</span> : <span />}
             </p>
           </>
         )}

@@ -15,6 +15,22 @@ export type Settings = {
 
 const date = (v: string | null) => (v ? new Date(v) : null);
 
+export const DEFAULT_TIPS_HEADING = "فيد واستفيد";
+
+// Read separately so a missing column never affects the voting settings.
+export async function getTipsHeading(): Promise<string> {
+  try {
+    const { data } = await createAdminClient()
+      .from("site_settings")
+      .select("tips_heading")
+      .eq("id", 1)
+      .maybeSingle();
+    return data?.tips_heading || DEFAULT_TIPS_HEADING;
+  } catch {
+    return DEFAULT_TIPS_HEADING;
+  }
+}
+
 // Returns null when the settings are unavailable so callers can fall back to open voting.
 export async function getSettings(): Promise<Settings | null> {
   try {

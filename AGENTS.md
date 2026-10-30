@@ -42,7 +42,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - القواعد: لا هدية ثانية لنفس المهتم على الإعلان نفسه، وانتظار 14 يوماً بين هداياه عند نفس المالك (يُعطَّل الزر عبر `cooling`)، وtrigger في القاعدة يمنع تجاوز `offer_qty`.
 - `tip_gifts` تحفظ نسخة (`title/body/photo_path/offer_qty/owner_id`) فتبقى الهدية بعد حذف الإعلان (`tip_id` يصير null).
 - صفحة المهتم `/nominee/[tipId]/[userId]` للمالك فقط (`getNominatorAt`). الرقم كاملاً للمالك إن كان `phone_public`، وإلا مقنّع.
-- الإشعارات: جدول `notifications`، `notify()` في `lib/notifications.ts`، وتُعرض في الملف (`notification-list.tsx`) وتُخفى دفعة واحدة. تُرسل عند: منح هدية، قبول/رد الفائز، موافقة الأدمن/إيقافه للإعلان.
+- الإشعارات: جدول `notifications` (`group_key`/`count` لتجميع المتكرر)، و`notify`/`notifyGrouped`/`notifyAdmins` في `lib/notifications.ts`، وتُعرض في صفحة `/notifications` (بند في القائمة مع عدّاد). تُرسل عند: منح هدية، قبول/رد الفائز، موافقة/إيقاف الإعلان، مهتم جديد (مجمّع)، قرب انتهاء الإعلان وحذفه وتذكير الهدية المعلّقة 3 أيام (من الـcron اليومي)، وللأدمن: إعلان بانتظار المراجعة و3 بلاغات على إعلان. المهاجرة `230000_notifications_grouping`.
 - البلاغات: `tip_reports` وزر «إبلاغ» (`report-button.tsx`, `actions/reports.ts`) للمسجّل غير المالك، مرة لكل إعلان، وعدّاد في لوحة الأدمن؛ لا إخفاء تلقائي.
 
 ## ملاحظات تقنية
@@ -53,6 +53,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - أخطاء PowerShell: لا تمرّر مصفوفات من عنصر واحد لاستبدال نص (تفسد العربية)؛ عدّل النصوص العربية بأداة `edit`. الملفات CRLF.
 - المهاجرات في `supabase/migrations`: المطبّقة حتى `…140000`؛ الجديدة بالترتيب `150000_tips_offer_qty`، `160000_tip_gifts`، `170000_tip_gifts_cooldown`، `180000_tips_offer_percent`، `190000_tip_gifts_quota_guard`، `200000_tip_gifts_snapshot`، `210000_notifications`، `220000_tip_reports` (المستخدم يشغّلها بنفسه؛ لم يُؤكَّد تشغيلها).
 - المستودع على GitHub: `domtom-app/Yoofoon` (فرع `main`)، والرفع بحساب `domtom-app` من طرفية المستخدم. النشر على Vercel قيد الإعداد؛ أضف متغيرات `.env.local` و`CRON_SECRET` هناك.
+
+## تحديثات حديثة
+- الرئيسية `/` = `PresidentHome adsAfterVote` (بعد تصويت المسجَّل في مرحلة التصويت تعرض إعلانات فيد واستفيد)؛ `/president` يعرض النسب دائماً (عنصر «تصويت الرئاسة» في القائمة).
+- «مهتم» ممنوع على المالك والمحظور (`tip_blocks`، مهاجرة `20261029250000` لم يؤكد تشغيلها)؛ «المهتمون» لكل إعلان معتمد، واختيار الفائز للمجاني فقط؛ صفحة «إدارة المهتم» في `nominators-dialog.tsx`.
+- فلتر العروض: الكل/مجاني/خصم/بدون؛ «السعر قبل» للخصم فقط.
+- مقبض `offer-strip.tsx` بصورة المعلن الدائرية (`ownerAvatarUrl`)؛ صفحة المعلن لها Open Graph.
+- زر العودة `BackButton` موحّد في كل الصفحات عدا الرئيسية.
+- الاستفتاءات `/contests`: جداول `contenders` و`contender_votes` وview `contender_results` ودالة `settle_contests()` (مهاجرة `20261030010000_contenders.sql` شُغّلت، و`20261030020000_contenders_cycle.sql` لم يؤكد تشغيلها). صوت لكل (مستخدم، مجال، مستوى)، للسكان فقط. المدة ثابتة 30 يومًا لكل مجموعة (مجال+نطاق) بموعد واحد؛ عند الانتهاء يبقى المركز الأول فقط (لكل مجال ونطاق) بلا موعد (`expires_at=null`، بانتظار المنافسين) ويخرج الباقون، وعند وجود منتظرَين (البطل ومرشح واحد) في نفس المجال (ولو اختلفت المحافظة) تُمسح أصواتهم وتبدأ جولة 30 يومًا. النسبة تُحسب داخل نطاق كل مرشح (مصر/محافظة/قرية). «رشّحني مرة أخرى» للخارجين. ملفات: `lib/contests*.ts`, `actions/contests.ts`, `components/contests-section.tsx`.
+- تعديلات الجلسة غير مرفوعة إلى GitHub بعد.
 
 ## المتبقي / مقترحات
 - ضبط `CRON_SECRET` في Vercel (لم يتم بعد).

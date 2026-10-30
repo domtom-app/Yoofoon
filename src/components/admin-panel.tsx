@@ -6,6 +6,7 @@ import { ImagePlus, Pencil, Plus, Trash2, User } from "lucide-react";
 import { deleteCandidate, saveCandidate } from "@/app/actions/admin";
 import { MembersTab } from "@/components/admin-parliament";
 import { TipsTab } from "@/components/admin-tips";
+import { AdvertisersTab } from "@/components/admin-advertisers";
 import { VotingAdmin } from "@/components/admin-voting";
 import { useAction } from "@/components/admin-ui";
 import type { AdminData } from "@/lib/admin-data";
@@ -24,7 +25,7 @@ import { Label } from "@/components/ui/label";
 import type { Candidate } from "@/lib/voting";
 import { cn } from "@/lib/utils";
 
-type Tab = "candidates" | "voting" | "members" | "tips";
+export type Tab = "candidates" | "voting" | "members" | "tips" | "advertisers" | "users";
 
 function CandidateForm({ candidate }: { candidate?: Candidate }) {
   const [open, setOpen] = useState(false);
@@ -169,13 +170,15 @@ function CandidatesTab({ candidates }: { candidates: Candidate[] }) {
   );
 }
 
-export function AdminPanel({ data }: { data: AdminData }) {
-  const [tab, setTab] = useState<Tab>("candidates");
+export function AdminPanel({ data, initialTab = "candidates", initialStatus }: { data: AdminData; initialTab?: Tab; initialStatus?: string }) {
+  const [tab, setTab] = useState<Tab>(initialTab);
   const tabs: { id: Tab; label: string }[] = [
     { id: "candidates", label: "المرشحون" },
     { id: "voting", label: "إدارة التصويت" },
     { id: "members", label: "البرلمان" },
     { id: "tips", label: "فيد واستفيد" },
+    { id: "advertisers", label: "المعلنون" },
+    { id: "users", label: "المستخدمون" },
   ];
 
   return (
@@ -199,7 +202,9 @@ export function AdminPanel({ data }: { data: AdminData }) {
       {tab === "candidates" && <CandidatesTab candidates={data.candidates} />}
       {tab === "voting" && <VotingAdmin data={data} />}
       {tab === "members" && <MembersTab data={data} />}
-      {tab === "tips" && <TipsTab tips={data.tips} places={data} />}
+      {tab === "tips" && <TipsTab tips={data.tips} places={data} heading={data.tipsHeading} initialStatus={initialStatus} />}
+      {tab === "advertisers" && <AdvertisersTab advertisers={data.advertisers} />}
+      {tab === "users" && <AdvertisersTab advertisers={data.users} empty="لا يوجد مستخدمون" />}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Home, Landmark, Lightbulb, LogOut, Menu, Settings, User, X } from "lucide-react";
+import { Bell, Home, Landmark, Lightbulb, LogOut, Menu, Settings, Trophy, User, Vote, X } from "lucide-react";
 import { signOut } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,11 +20,13 @@ export function MainMenu({
   signedIn,
   admin,
   avatarUrl,
+  unread = 0,
 }: {
   phone: string | null;
   signedIn: boolean;
   admin: boolean;
   avatarUrl: string | null;
+  unread?: number;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -36,11 +38,12 @@ export function MainMenu({
             variant="ghost"
             size="icon"
             aria-label="القائمة"
-            className="size-11 rounded-full"
+            className="relative size-11 rounded-full"
           />
         }
       >
         <Menu className="size-6" />
+        {unread > 0 && <span className="absolute end-2 top-2 size-2.5 rounded-full bg-destructive" />}
       </SheetTrigger>
 
       <SheetContent
@@ -89,8 +92,10 @@ export function MainMenu({
           )}
           {[
             { href: "/", label: "الرئيسية", Icon: Home },
+            { href: "/president", label: "تصويت الرئاسة", Icon: Vote },
             { href: "/parliament", label: "تصويت البرلمان", Icon: Landmark },
             { href: "/tips", label: "فيد واستفيد", Icon: Lightbulb },
+            { href: "/contests", label: "الاستفتاءات", Icon: Trophy },
           ].map(({ href, label, Icon }) => (
             <Button
               key={href}
@@ -104,6 +109,23 @@ export function MainMenu({
               {label}
             </Button>
           ))}
+          {signedIn && (
+            <Button
+              render={<Link href="/notifications" />}
+              nativeButton={false}
+              variant="secondary"
+              onClick={() => setOpen(false)}
+              className="h-14 w-full justify-start gap-3 rounded-2xl text-base font-bold"
+            >
+              <Bell className="size-5 text-primary" />
+              الإشعارات
+              {unread > 0 && (
+                <span className="ms-auto flex h-6 min-w-6 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-bold tabular-nums text-white">
+                  {unread}
+                </span>
+              )}
+            </Button>
+          )}
           {admin && (
             <Button
               render={<Link href="/admin" />}

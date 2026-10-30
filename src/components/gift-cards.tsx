@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { Check, Gift, Undo2 } from "lucide-react";
+import { Check, Gift, Share2, Undo2 } from "lucide-react";
 import { respondGift } from "@/app/actions/gifts";
 import { Button } from "@/components/ui/button";
 import type { MyGift } from "@/lib/gifts-data";
@@ -30,7 +30,23 @@ function GiftCard({ g }: { g: MyGift }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [copied, setCopied] = useState(false);
 
+  const share = async () => {
+    const url = `${window.location.origin}${g.tipId ? `/advertiser/${g.tipId}` : ""}`;
+    const text = `فزت بهدية من إعلان «${g.title}» على Yoofoon`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ text, url });
+        return;
+      }
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // The user dismissed the share sheet.
+    }
+  };
   const respond = (accept: boolean) => {
     start(async () => {
       const res = await respondGift(g.id, accept);
@@ -39,7 +55,7 @@ function GiftCard({ g }: { g: MyGift }) {
   };
 
   return (
-    <div className="flex w-full flex-col gap-3 overflow-hidden rounded-3xl border border-primary/30 bg-card p-4">
+    <div id="gifts" className="flex w-full scroll-mt-24 flex-col gap-3 overflow-hidden rounded-3xl border border-primary/30 bg-card p-4">
       <div className="flex items-center gap-2 text-primary">
         <Gift className="size-5" />
         <p className="text-base font-bold leading-[1.5]">فزت بهدية</p>
@@ -55,10 +71,20 @@ function GiftCard({ g }: { g: MyGift }) {
         </div>
       )}
       {g.status === "accepted" ? (
-        <p className="flex items-center justify-center gap-1 text-sm font-bold text-primary">
-          <Check className="size-4" />
-          تم قبول الهدية
-        </p>
+        <div className="flex items-center justify-center gap-3">
+          <p className="flex items-center gap-1 text-sm font-bold text-primary">
+            <Check className="size-4" />
+            تم قبول الهدية
+          </p>
+          <button
+            type="button"
+            onClick={share}
+            aria-label={copied ? "تم النسخ" : "مشاركة"}
+            className="flex size-8 items-center justify-center text-primary"
+          >
+            {copied ? <Check className="size-5" /> : <Share2 className="size-5" />}
+          </button>
+        </div>
       ) : confirming ? (
         <div className="flex flex-col gap-2">
           <p className="text-center text-sm font-bold">رد الهدية؟</p>

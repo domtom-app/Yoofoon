@@ -16,14 +16,16 @@ export function areasOverlap(a: Area, b: Area) {
 }
 
 export function areaLabel(area: Area, places: Places) {
-  if (area.districtId) {
-    const d = places.districts.find((x) => x.id === area.districtId);
-    const c = places.centers.find((x) => x.id === area.centerId);
-    return [c?.name, d?.name].filter(Boolean).join(" - ");
-  }
-  if (area.centerId) return places.centers.find((x) => x.id === area.centerId)?.name ?? "";
   if (area.governorateId !== null) {
-    return places.governorates.find((x) => x.id === area.governorateId)?.name ?? "";
+    const g = places.governorates.find((x) => x.id === area.governorateId)?.name;
+    const c = places.centers.find((x) => x.id === area.centerId)?.name;
+    const d = places.districts.find((x) => x.id === area.districtId)?.name;
+    return [g, c, d].filter(Boolean).join(" - ");
   }
-  return "";
+  return "مصر";
+}
+
+export function governorateLabel(area: Area, places: Places) {
+  if (area.governorateId === null) return "مصر";
+  return places.governorates.find((x) => x.id === area.governorateId)?.name ?? "";
 }

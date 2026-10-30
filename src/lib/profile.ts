@@ -17,7 +17,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 export async function getProfile(userId: string) {
   const { data } = await createAdminClient()
     .from("profiles")
-    .select("district_id, district_changed_at, avatar_path, phone_public")
+    .select("district_id, district_changed_at, avatar_path, phone_public, username, name_with_phone, social_public, social_links, verified, terms_accepted_at, suspend_kind, suspend_reason, suspend_until")
     .eq("user_id", userId)
     .maybeSingle();
   return data;

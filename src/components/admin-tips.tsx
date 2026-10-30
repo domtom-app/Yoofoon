@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Check, Pencil, Trash2, X } from "lucide-react";
-import { deleteTip, setTipApproved, updateTip } from "@/app/actions/tips";
+import { deleteTip, saveTipsHeading, setTipApproved, updateTip } from "@/app/actions/tips";
+import { Label } from "@/components/ui/label";
+import { HEADING_MAX } from "@/lib/voting";
 import { AreaFields } from "@/components/area-select";
 import { PhotoField } from "@/components/photo-field";
 import { useAction } from "@/components/admin-ui";
@@ -26,7 +28,7 @@ export function EditTip({
   places,
   triggerClassName = "h-10 rounded-xl text-sm font-bold",
 }: {
-  tip: Pick<AdminTip, "id" | "title" | "body" | "photoUrl" | "area" | "link" | "offer" | "offerQty" | "offerPercent">;
+  tip: Pick<AdminTip, "id" | "title" | "body" | "photoUrl" | "area" | "link" | "offer" | "offerQty" | "offerPercent" | "priceNow" | "priceBefore">;
   places: Places;
   triggerClassName?: string;
 }) {
@@ -57,7 +59,7 @@ export function EditTip({
             className="w-full rounded-xl border border-input bg-transparent p-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
           <AreaFields places={places} initial={tip.area} allLabel="كل مصر" />
-          <OfferField defaultValue={tip.offer} defaultQty={tip.offerQty} defaultPercent={tip.offerPercent} />
+          <OfferField defaultValue={tip.offer} defaultQty={tip.offerQty} defaultPercent={tip.offerPercent} defaultPriceNow={tip.priceNow} defaultPriceBefore={tip.priceBefore} />
           <Input name="link" dir="ltr" inputMode="url" maxLength={300} defaultValue={tip.link ?? ""} placeholder="https://" aria-label="الرابط" className="h-12 rounded-xl" />
           {tip.photoUrl && (
             <label className="flex items-center gap-2 text-sm">
@@ -76,10 +78,12 @@ export function EditTip({
   );
 }
 
-function TipRow({ tip, places }: { tip: AdminTip; places: Places }) {
+export function TipRow({ tip, places }: { tip: AdminTip; places: Places }) {
   const approve = useAction((fd) => setTipApproved(fd), () => {});
   const remove = useAction((fd) => deleteTip(fd), () => {});
   const error = approve.error ?? remove.error;
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
 
   return (
     <li className="flex flex-col gap-2 rounded-2xl bg-secondary p-3">
@@ -96,8 +100,34 @@ function TipRow({ tip, places }: { tip: AdminTip; places: Places }) {
         </div>
       </div>
       {tip.body && <p className="line-clamp-2 text-sm text-muted-foreground">{tip.body}</p>}
+      <select
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        aria-label="إشعار صاحب الإعلان"
+        className="h-9 w-full rounded-xl border bg-background px-3 text-sm"
+      >
+        <option value="">إشعار بدون سبب</option>
+        <option value="misleading">السبب: محتوى مضلل أو غير دقيق</option>
+        <option value="inappropriate">السبب: محتوى غير لائق</option>
+        <option value="incomplete">السبب: بيانات الإعلان غير مكتملة</option>
+        <option value="duplicate">السبب: إعلان مكرر</option>
+        <option value="custom">سبب آخر (كتابة)</option>
+        <option value="none">عدم إرسال إشعار</option>
+      </select>
+      {reason === "custom" && (
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          maxLength={80}
+          placeholder="اكتب السبب"
+          className="h-9 w-full rounded-xl border bg-background px-3 text-sm"
+        />
+      )}
       <div className="grid grid-cols-3 gap-2">
         <form action={approve.run} className="contents">
+          <input type="hidden" name="reason" value={reason} />
+          <input type="hidden" name="reason_text" value={note} />
           <input type="hidden" name="id" value={tip.id} />
           <input type="hidden" name="approved" value={String(!tip.approved)} />
           <Button
@@ -112,6 +142,8 @@ function TipRow({ tip, places }: { tip: AdminTip; places: Places }) {
         </form>
         <EditTip tip={tip} places={places} />
         <form action={remove.run} className="contents">
+          <input type="hidden" name="reason" value={reason} />
+          <input type="hidden" name="reason_text" value={note} />
           <input type="hidden" name="id" value={tip.id} />
           <Button type="submit" variant="outline" disabled={remove.pending} className="h-10 rounded-xl text-sm font-bold text-destructive">
             <Trash2 className="size-4" />
@@ -126,9 +158,48 @@ function TipRow({ tip, places }: { tip: AdminTip; places: Places }) {
 
 const filterCls = "h-10 ps-3 pe-7 text-sm";
 
-export function TipsTab({ tips, places }: { tips: AdminTip[]; places: Places }) {
+function HeadingForm({ heading }: { heading: string }) {
+  const [title, setTitle] = useState(heading);
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<{ error?: string; ok?: boolean } | null>(null);
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl bg-card p-4 ring-1 ring-foreground/10">
+      <Label htmlFor="tips-heading">العنوان</Label>
+      <div className="flex gap-2">
+        <Input
+          id="tips-heading"
+          value={title}
+          maxLength={HEADING_MAX}
+          onChange={(e) => setTitle(e.target.value)}
+          className="h-12 flex-1 rounded-xl text-base font-bold"
+        />
+        <Button
+          disabled={pending || title.trim() === heading}
+          onClick={() => start(async () => setMsg(await saveTipsHeading(title)))}
+          className="h-12 rounded-xl px-5 font-bold"
+        >
+          {pending ? "..." : "حفظ"}
+        </Button>
+      </div>
+      {msg?.error && <p role="alert" className="text-sm text-destructive">{msg.error}</p>}
+      {msg?.ok && <p className="text-sm text-primary">تم الحفظ</p>}
+    </div>
+  );
+}
+
+export function TipsTab({
+  tips,
+  places,
+  heading,
+  initialStatus = "all",
+}: {
+  tips: AdminTip[];
+  places: Places;
+  heading: string;
+  initialStatus?: string;
+}) {
   const [formKey, setFormKey] = useState(0);
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState(initialStatus);
   const [gov, setGov] = useState("all");
   const shown = tips.filter(
     (t) =>
@@ -137,6 +208,7 @@ export function TipsTab({ tips, places }: { tips: AdminTip[]; places: Places }) 
   );
   return (
     <div className="flex flex-col gap-4">
+      <HeadingForm heading={heading} />
       <TipForm key={formKey} places={places} onDone={() => setFormKey((k) => k + 1)} />
       <div className="grid grid-cols-2 gap-2">
         <NativeSelect value={status} onChange={(e) => setStatus(e.target.value)} aria-label="الحالة" className={filterCls} iconClassName="end-2 size-4">

@@ -6,6 +6,7 @@ import { Wordmark } from "@/components/wordmark";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile } from "@/lib/profile";
+import { getUnreadCount } from "@/lib/notifications";
 import { photoBaseUrl } from "@/lib/voting-data";
 
 async function Menu() {
@@ -13,6 +14,7 @@ async function Menu() {
   let admin = false;
   let avatarUrl: string | null = null;
   let phonePublic = false;
+  let unread = 0;
   if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
     await connection();
     const supabase = await createClient();
@@ -23,7 +25,8 @@ async function Menu() {
     admin = meta?.role === "admin";
     if (data?.claims?.sub) {
       try {
-        const profile = await getProfile(data.claims.sub);
+        const [profile, count] = await Promise.all([getProfile(data.claims.sub), getUnreadCount(data.claims.sub)]);
+        unread = count;
         phonePublic = Boolean(profile?.phone_public);
         if (profile?.avatar_path) avatarUrl = `${photoBaseUrl()}/${profile.avatar_path}`;
       } catch {
@@ -31,7 +34,15 @@ async function Menu() {
       }
     }
   }
-  return <MainMenu phone={phonePublic ? phone : null} signedIn={Boolean(phone)} admin={admin} avatarUrl={avatarUrl} />;
+  return (
+    <MainMenu
+      phone={phonePublic ? phone : null}
+      signedIn={Boolean(phone)}
+      admin={admin}
+      avatarUrl={avatarUrl}
+      unread={unread}
+    />
+  );
 }
 
 export async function getVisitorCount(): Promise<number | null> {
