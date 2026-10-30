@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Flag } from "lucide-react";
-import { reportTip } from "@/app/actions/reports";
+import { reportContender, reportTip } from "@/app/actions/reports";
 
 const REASONS = [
   { value: "misleading", label: "معلومات مضللة" },
@@ -11,7 +11,7 @@ const REASONS = [
   { value: "other", label: "سبب آخر" },
 ];
 
-export function ReportButton({ tipId }: { tipId: string }) {
+export function ReportButton({ tipId, contenderId }: { tipId?: string; contenderId?: string }) {
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export function ReportButton({ tipId }: { tipId: string }) {
 
   const send = (reason: string) =>
     start(async () => {
-      const res = await reportTip(tipId, reason);
+      const res = contenderId ? await reportContender(contenderId, reason) : await reportTip(tipId ?? "", reason);
       if (res.error) setError(res.error);
       else setDone(true);
     });

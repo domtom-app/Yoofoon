@@ -66,10 +66,11 @@ const maskPhone = (p: string) => (p.length >= 8 ? `${p.slice(0, 3)}••••�
 
 export type PublicNominator = { userId: string; name: string; avatarUrl: string | null; governorate: string };
 
-// Public list: no phone numbers, open to any visitor.
+// No phone numbers, and only for signed-in users.
 export async function listTipNominators(tipId: string): Promise<{ error?: string; items: PublicNominator[] }> {
   const id = idSchema.safeParse(tipId);
   if (!id.success) return { error: "غير صالح", items: [] };
+  if (!(await getSessionUser())) return { error: "سجّل الدخول لعرض المهتمين", items: [] };
   try {
     const admin = createAdminClient();
     const { data: tip } = await admin.from("tips").select("id").eq("id", id.data).eq("approved", true).maybeSingle();

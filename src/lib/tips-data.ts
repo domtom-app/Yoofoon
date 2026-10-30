@@ -405,7 +405,7 @@ async function loadTips({
         approved: r.approved,
         hasOwner: r.user_id !== null,
         ownerAvatarUrl: r.user_id ? (ownerAvatar.get(r.user_id) ?? null) : null,
-        nominatorAvatars: (recent.get(r.id) ?? []).map((id) => nomAvatar.get(id) ?? null),
+        nominatorAvatars: !user ? [] : (recent.get(r.id) ?? []).map((id) => nomAvatar.get(id) ?? null),
         area,
         link: r.link,
         offer: r.offer,

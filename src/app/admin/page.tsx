@@ -13,7 +13,7 @@ async function Content({ params }: { params: Promise<{ tab?: string; status?: st
   if (!data) {
     return <p className="py-20 text-center text-muted-foreground">تعذّر التحميل</p>;
   }
-  return <AdminPanel data={data} initialTab={tab === "tips" ? "tips" : undefined} initialStatus={status === "pending" ? "pending" : undefined} />;
+  return <AdminPanel data={data} initialTab={tab === "tips" ? "tips" : tab === "contests" ? "contests" : undefined} initialStatus={status === "pending" ? "pending" : undefined} />;
 }
 
 export default function AdminPage({ searchParams }: { searchParams: Promise<{ tab?: string; status?: string }> }) {

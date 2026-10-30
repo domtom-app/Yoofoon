@@ -147,3 +147,49 @@ export async function getContests(): Promise<ContestsData> {
     return { items: [], out: [], account: Boolean(user), places: { governorates: [], centers: [], districts: [] } };
   }
 }
+
+export type AdminContender = {
+  id: string;
+  name: string;
+  photoUrl: string | null;
+  categoryLabel: string;
+  specialty: string | null;
+  areaText: string;
+  active: boolean;
+  waiting: boolean;
+  votes: number;
+  reports: number;
+  owner: string;
+};
+
+export async function getAdminContests(places: Places): Promise<AdminContender[]> {
+  const admin = createAdminClient();
+  const [{ data }, { data: reports }] = await Promise.all([
+    admin.from("contender_results").select("*").order("created_at", { ascending: false }).limit(500),
+    admin.from("contender_reports").select("contender_id"),
+  ]);
+  const rows = (data ?? []) as Row[];
+  const reportCount = new Map<string, number>();
+  for (const r of reports ?? []) reportCount.set(r.contender_id, (reportCount.get(r.contender_id) ?? 0) + 1);
+  const ownerIds = [...new Set(rows.map((r) => r.user_id))];
+  const { data: profiles } = ownerIds.length
+    ? await admin.from("profiles").select("user_id, username").in("user_id", ownerIds)
+    : { data: [] };
+  const owner = new Map((profiles ?? []).map((p) => [p.user_id, p.username as string | null]));
+  return rows
+    .map<AdminContender>((r) => ({
+      id: r.id,
+      name: r.name,
+      photoUrl: r.photo_path ? `${photoBaseUrl()}/${r.photo_path}` : null,
+      categoryLabel: categoryOf(r.category)?.label ?? "",
+      specialty: r.specialty,
+      areaText: areaLabel({ governorateId: r.governorate_id, centerId: r.center_id, districtId: r.district_id }, places),
+      active: r.status === "active",
+      waiting: r.status === "active" && r.expires_at === null,
+      votes: r.votes,
+      reports: reportCount.get(r.id) ?? 0,
+      owner: owner.get(r.user_id) ?? "مستخدم",
+    }))
+    .sort((a, b) => b.reports - a.reports);
+}
+

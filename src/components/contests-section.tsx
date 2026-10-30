@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ReportButton } from "@/components/report-button";
 import { CONTEST_CATEGORIES, CONTEST_START_COUNT, categoryOf } from "@/lib/contests";
 import type { ContestItem, ContestsData, OutContender } from "@/lib/contests-data";
 import type { Places } from "@/lib/area";
@@ -226,7 +227,10 @@ export function ContestsSection({ data }: { data: ContestsData }) {
               unit="صوت"
               mine={i.voted}
             >
-              <ContestActions item={i} account={data.account} />
+              <div className="flex flex-col gap-2">
+                <ContestActions item={i} account={data.account} />
+                {data.account && !i.isOwn && <ReportButton contenderId={i.id} />}
+              </div>
             </CandidateCard>
           ))}
         </ul>

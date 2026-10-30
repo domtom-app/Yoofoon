@@ -2,7 +2,8 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchDistricts } from "@/lib/districts-query";
 import { getSettings, getTipsHeading } from "@/lib/settings";
-import { getAdminAdvertisers, getAdminTips, getAdminUsers, type AdminAdvertiser, type AdminTip } from "@/lib/tips-data";
+import { getAdminAdvertisers, getAdminTips, getAdminUsers, getPlaces, type AdminAdvertiser, type AdminTip } from "@/lib/tips-data";
+import { getAdminContests, type AdminContender } from "@/lib/contests-data";
 import { getMemberData, getVotingData, photoBaseUrl } from "@/lib/voting-data";
 import { DEFAULT_HEADINGS, toCenters, toDistricts, type Candidate, type Center, type District, type Governorate } from "@/lib/voting";
 
@@ -31,6 +32,7 @@ export type AdminData = {
   tipsHeading: string;
   advertisers: AdminAdvertiser[];
   users: AdminAdvertiser[];
+  contests: AdminContender[];
 };
 
 export async function getAdminData(): Promise<AdminData | null> {
@@ -39,7 +41,7 @@ export async function getAdminData(): Promise<AdminData | null> {
 
   try {
     const admin = createAdminClient();
-    const [gov, centers, districts, members, settings, tips, tipsHeading, advertisers, users] = await Promise.all([
+    const [gov, centers, districts, members, settings, tips, tipsHeading, advertisers, users, places] = await Promise.all([
       admin.from("governorates").select("id, name").order("id"),
       admin.from("centers").select("id, governorate_id, name").order("name"),
       fetchDistricts(admin),
@@ -52,7 +54,9 @@ export async function getAdminData(): Promise<AdminData | null> {
       getTipsHeading(),
       getAdminAdvertisers(),
       getAdminUsers(),
+      getPlaces(),
     ]);
+    const contests = await getAdminContests(places).catch(() => []);
     if (gov.error || centers.error || districts.error || members.error) return null;
 
     const base = photoBaseUrl();
@@ -88,6 +92,7 @@ export async function getAdminData(): Promise<AdminData | null> {
       tipsHeading,
       advertisers,
       users,
+      contests,
     };
   } catch {
     return null;

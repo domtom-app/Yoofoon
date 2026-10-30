@@ -7,6 +7,7 @@ import { deleteCandidate, saveCandidate } from "@/app/actions/admin";
 import { MembersTab } from "@/components/admin-parliament";
 import { TipsTab } from "@/components/admin-tips";
 import { AdvertisersTab } from "@/components/admin-advertisers";
+import { ContestsTab } from "@/components/admin-contests";
 import { VotingAdmin } from "@/components/admin-voting";
 import { useAction } from "@/components/admin-ui";
 import type { AdminData } from "@/lib/admin-data";
@@ -25,7 +26,7 @@ import { Label } from "@/components/ui/label";
 import type { Candidate } from "@/lib/voting";
 import { cn } from "@/lib/utils";
 
-export type Tab = "candidates" | "voting" | "members" | "tips" | "advertisers" | "users";
+export type Tab = "candidates" | "voting" | "members" | "tips" | "advertisers" | "users" | "contests";
 
 function CandidateForm({ candidate }: { candidate?: Candidate }) {
   const [open, setOpen] = useState(false);
@@ -178,6 +179,7 @@ export function AdminPanel({ data, initialTab = "candidates", initialStatus }: {
     { id: "members", label: "البرلمان" },
     { id: "tips", label: "فيد واستفيد" },
     { id: "advertisers", label: "المعلنون" },
+    { id: "contests", label: "الاستفتاءات" },
     { id: "users", label: "المستخدمون" },
   ];
 
@@ -204,6 +206,7 @@ export function AdminPanel({ data, initialTab = "candidates", initialStatus }: {
       {tab === "members" && <MembersTab data={data} />}
       {tab === "tips" && <TipsTab tips={data.tips} places={data} heading={data.tipsHeading} initialStatus={initialStatus} />}
       {tab === "advertisers" && <AdvertisersTab advertisers={data.advertisers} />}
+      {tab === "contests" && <ContestsTab contests={data.contests} />}
       {tab === "users" && <AdvertisersTab advertisers={data.users} empty="لا يوجد مستخدمون" />}
     </div>
   );

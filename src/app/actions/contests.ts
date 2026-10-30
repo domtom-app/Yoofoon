@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { isAdmin } from "@/lib/admin-auth";
 import { parsePhoto, removePhoto, uploadPhoto } from "@/lib/admin-storage";
 import { getSessionUser } from "@/lib/profile";
 import { checkRateLimit } from "@/lib/ratelimit";
@@ -208,6 +209,28 @@ export async function rerunContender(_prev: TipState, formData: FormData): Promi
     return { error: "تعذّر الحفظ" };
   }
   refresh();
+  return { done: true };
+}
+
+export async function adminDeleteContender(id: string): Promise<TipState> {
+  if (!(await isAdmin()) || !idSchema.safeParse(id).success) return { error: "غير مصرّح" };
+  try {
+    const { data } = await createAdminClient().from("contenders").delete().eq("id", id).select("photo_path").maybeSingle();
+    if (!data) return { error: "غير موجود" };
+    await removePhoto(data.photo_path);
+  } catch {
+    return { error: "تعذّر الحذف" };
+  }
+  refresh();
+  revalidatePath("/admin");
+  return { done: true };
+}
+
+export async function adminClearContenderReports(id: string): Promise<TipState> {
+  if (!(await isAdmin()) || !idSchema.safeParse(id).success) return { error: "غير مصرّح" };
+  const { error } = await createAdminClient().from("contender_reports").delete().eq("contender_id", id);
+  if (error) return { error: "تعذّر الحفظ" };
+  revalidatePath("/admin");
   return { done: true };
 }
 

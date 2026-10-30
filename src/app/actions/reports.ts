@@ -14,6 +14,34 @@ const schema = z.object({
   reason: z.enum(["misleading", "inappropriate", "spam", "other"]),
 });
 
+export async function reportContender(contenderId: string, reason: string): Promise<AdminState> {
+  const parsed = schema.safeParse({ tipId: contenderId, reason });
+  if (!parsed.success) return { error: "غير صالح" };
+  const user = await getSessionUser();
+  if (!user) return { error: "سجّل الدخول أولًا" };
+  if (!(await checkRateLimit(`report:${user.id}`))) return { error: "حاول لاحقًا" };
+  try {
+    const admin = createAdminClient();
+    const { data: c } = await admin.from("contenders").select("user_id, name").eq("id", contenderId).maybeSingle();
+    if (!c) return { error: "الترشيح غير موجود" };
+    if (c.user_id === user.id) return { error: "غير مسموح" };
+    const { error } = await admin
+      .from("contender_reports")
+      .insert({ contender_id: contenderId, user_id: user.id, reason: parsed.data.reason });
+    if (error) return { error: error.code === "23505" ? "سبق إبلاغك" : "تعذّر الإرسال" };
+    const { count } = await admin
+      .from("contender_reports")
+      .select("id", { count: "exact", head: true })
+      .eq("contender_id", contenderId);
+    if (count === REPORT_ALERT) {
+      await notifyAdmins(`report:${contenderId}`, () => `وصلت ${REPORT_ALERT} بلاغات على ترشيح «${c.name}»`, "/admin?tab=contests");
+    }
+  } catch {
+    return { error: "تعذّر الإرسال" };
+  }
+  return { ok: true };
+}
+
 export async function reportTip(tipId: string, reason: string): Promise<AdminState> {
   const parsed = schema.safeParse({ tipId, reason });
   if (!parsed.success) return { error: "غير صالح" };
